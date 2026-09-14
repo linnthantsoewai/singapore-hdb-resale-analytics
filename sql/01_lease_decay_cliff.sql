@@ -67,6 +67,7 @@ SELECT
     town,
     flat_type,
     lease_bracket,
+    bracket_order,
     sales_count,
     median_psm,
     median_price,
