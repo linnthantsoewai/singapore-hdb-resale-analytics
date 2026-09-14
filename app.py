@@ -495,7 +495,7 @@ with tab1:
             <div class="chart-title">Tenure Valuation Progression ($/sqm)</div>
             <div class="chart-subtitle">Discontinuity and pricing drop as remaining tenure crosses the 60-year threshold (highlighted in crimson)</div>
         """, unsafe_allow_html=True)
-        st.plotly_chart(fig_decay, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(fig_decay, width="stretch", config={"displayModeBar": False})
         st.markdown("</div>", unsafe_allow_html=True)
 
         table_rows = ""
@@ -647,7 +647,7 @@ with tab2:
         <div class="chart-title">The Real Purchasing Power Trajectory (1990–2026)</div>
         <div class="chart-subtitle">The shaded region represents the inflation drag accounted for by consumer price index changes</div>
     """, unsafe_allow_html=True)
-    st.plotly_chart(fig_growth, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig_growth, width="stretch", config={"displayModeBar": False})
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -709,7 +709,7 @@ with tab3:
             <div class="chart-title">Capital Appreciation Leaderboard: {chosen_decade}</div>
             <div class="chart-subtitle">Calculated via decade start vs end price-per-sqm endpoints</div>
         """, unsafe_allow_html=True)
-        st.plotly_chart(fig_rank, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(fig_rank, width="stretch", config={"displayModeBar": False})
         st.markdown("</div>", unsafe_allow_html=True)
 
         t_rows = ""
@@ -765,7 +765,7 @@ with tab4:
         <div class="chart-title">Average Floor Area (sqm) by Flat Type Across Four Decades</div>
         <div class="chart-subtitle">5-Room flats contracted by -5.3% (124.2m² → 117.6m²), while 4-Room flats contracted by -1.9%</div>
     """, unsafe_allow_html=True)
-    st.plotly_chart(fig_shrink, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig_shrink, width="stretch", config={"displayModeBar": False})
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("#### Part B: The Vertical Storey Height Premium (2020–2026 Market Regimes)")
@@ -796,7 +796,7 @@ with tab4:
             <div class="chart-title">Price-per-sqm Across Floor Heights</div>
             <div class="chart-subtitle">Sky tier units command an exceptional premium over lower floors</div>
         """, unsafe_allow_html=True)
-        st.plotly_chart(fig_vert, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(fig_vert, width="stretch", config={"displayModeBar": False})
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col_st2:
@@ -856,7 +856,7 @@ with tab5:
         <div class="chart-title">Market Response Across 5 Historical Interventions</div>
         <div class="chart-subtitle">Notice how TDSR in 2013 successfully cooled prices, whereas post-2020 pandemic supply shortages led to continued price increases despite cooling attempts</div>
     """, unsafe_allow_html=True)
-    st.plotly_chart(fig_policy, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig_policy, width="stretch", config={"displayModeBar": False})
     st.markdown("</div>", unsafe_allow_html=True)
 
     pol_rows = ""
