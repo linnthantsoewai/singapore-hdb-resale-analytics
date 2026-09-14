@@ -508,7 +508,7 @@ with tab1:
 
     sub_df = df_decay[
         (df_decay["town"] == selected_town) & (df_decay["flat_type"] == selected_flat)
-    ].sort_values("lease_bracket")
+    ].sort_values("bracket_order")
 
     if not sub_df.empty:
         colors = []
