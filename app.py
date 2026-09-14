@@ -234,6 +234,16 @@ def clean_numeric_df(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _fetch_sql(sql_path: str) -> pd.DataFrame:
+    """Shared helper: connect to DB, execute a single-statement SQL file, return a clean DataFrame."""
+    with psycopg.connect(DB_CONN_STR) as conn:
+        with conn.cursor() as cur:
+            with open(sql_path, "r") as f:
+                cur.execute(f.read())
+            cols = [d[0] for d in cur.description]
+            return clean_numeric_df(pd.DataFrame(cur.fetchall(), columns=cols))
+
+
 @st.cache_data(ttl=3600)
 def fetch_overview_kpis():
     with psycopg.connect(DB_CONN_STR) as conn:
@@ -274,35 +284,17 @@ def fetch_overview_kpis():
 
 @st.cache_data(ttl=3600)
 def fetch_lease_decay_data():
-    with psycopg.connect(DB_CONN_STR) as conn:
-        with conn.cursor() as cur:
-            with open("sql/01_lease_decay_cliff.sql", "r") as f:
-                cur.execute(f.read())
-            cols = [d[0] for d in cur.description]
-            df = pd.DataFrame(cur.fetchall(), columns=cols)
-            return clean_numeric_df(df)
+    return _fetch_sql("sql/01_lease_decay_cliff.sql")
 
 
 @st.cache_data(ttl=3600)
 def fetch_real_growth_data():
-    with psycopg.connect(DB_CONN_STR) as conn:
-        with conn.cursor() as cur:
-            with open("sql/02_real_vs_nominal_growth.sql", "r") as f:
-                cur.execute(f.read())
-            cols = [d[0] for d in cur.description]
-            df = pd.DataFrame(cur.fetchall(), columns=cols)
-            return clean_numeric_df(df)
+    return _fetch_sql("sql/02_real_vs_nominal_growth.sql")
 
 
 @st.cache_data(ttl=3600)
 def fetch_town_ranking_data():
-    with psycopg.connect(DB_CONN_STR) as conn:
-        with conn.cursor() as cur:
-            with open("sql/03_town_ranking_by_decade.sql", "r") as f:
-                cur.execute(f.read())
-            cols = [d[0] for d in cur.description]
-            df = pd.DataFrame(cur.fetchall(), columns=cols)
-            return clean_numeric_df(df)
+    return _fetch_sql("sql/03_town_ranking_by_decade.sql")
 
 
 @st.cache_data(ttl=3600)
@@ -320,13 +312,7 @@ def fetch_size_and_storeys_data():
 
 @st.cache_data(ttl=3600)
 def fetch_policy_impact_data():
-    with psycopg.connect(DB_CONN_STR) as conn:
-        with conn.cursor() as cur:
-            with open("sql/05_policy_event_impact.sql", "r") as f:
-                cur.execute(f.read())
-            cols = [d[0] for d in cur.description]
-            df = pd.DataFrame(cur.fetchall(), columns=cols)
-            return clean_numeric_df(df)
+    return _fetch_sql("sql/05_policy_event_impact.sql")
 
 
 def apply_chart_theme(fig, height=380):
@@ -518,7 +504,7 @@ with tab1:
             pct_str = f"{row['step_change_pct']:+.1f}%" if pd.notna(row['step_change_pct']) else "—"
             
             badge_class = "badge-blue"
-            if row['cliff_indicator'] == "CRITICAL DROP":
+            if row['cliff_indicator'] == "CONFIRMED CLIFF":
                 badge_class = "badge-red"
             elif row['cliff_indicator'] == "MODERATE IMPACT":
                 badge_class = "badge-amber"
@@ -702,7 +688,7 @@ with tab3:
         for _, row in decade_df.iterrows():
             prev_r = f"#{int(row['prev_decade_rank'])}" if pd.notna(row['prev_decade_rank']) else "—"
             traj_badge = "badge-neutral"
-            if "CLIMBING" in str(row['trajectory']):
+            if "RISING" in str(row['trajectory']):
                 traj_badge = "badge-green"
             elif "FALLING" in str(row['trajectory']):
                 traj_badge = "badge-red"

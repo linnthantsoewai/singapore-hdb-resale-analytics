@@ -4,7 +4,7 @@
 -- adjusts for Singapore Consumer Price Index (CPI) inflation to evaluate true real
 -- purchasing power gains vs headline nominal numbers across the 36-year timeline (1990-2026).
 
-WITH RECURSIVE cpi_reference(trans_year, cpi_index_1990_base) AS (
+WITH cpi_reference(trans_year, cpi_index_1990_base) AS (
     -- Official Singapore Department of Statistics (DOS) CPI trajectory (Base: 1990 = 100.0)
     VALUES
         (1990, 100.00), (1991, 103.40), (1992, 105.80), (1993, 108.30), (1994, 111.70),
