@@ -10,13 +10,13 @@ WITH lease_tranches AS (
         town,
         flat_type,
         CASE
-            WHEN remaining_lease_years >= 80 THEN '1. 80+ Years (Post-MOP/Prime)'
-            WHEN remaining_lease_years >= 70 THEN '2. 70-79 Years (Pre-Decay Stage)'
-            WHEN remaining_lease_years >= 65 THEN '3. 65-69 Years (Approaching Boundary)'
-            WHEN remaining_lease_years >= 60 THEN '4. 60-64 Years (Pre-Cliff Edge)'
-            WHEN remaining_lease_years >= 55 THEN '5. 55-59 Years (Post-60 Cliff)'
-            WHEN remaining_lease_years >= 50 THEN '6. 50-54 Years (Deep Decay)'
-            ELSE '7. < 50 Years (Terminal Phase)'
+            WHEN remaining_lease_years >= 80 THEN '80+ Years (Post-MOP/Prime)'
+            WHEN remaining_lease_years >= 70 THEN '70-79 Years (Pre-Decay Stage)'
+            WHEN remaining_lease_years >= 65 THEN '65-69 Years (Approaching Boundary)'
+            WHEN remaining_lease_years >= 60 THEN '60-64 Years (Pre-Cliff Edge)'
+            WHEN remaining_lease_years >= 55 THEN '55-59 Years (Post-60 Cliff)'
+            WHEN remaining_lease_years >= 50 THEN '50-54 Years (Deep Decay)'
+            ELSE '< 50 Years (Terminal Phase)'
         END AS lease_bracket,
         CASE
             WHEN remaining_lease_years >= 80 THEN 1
