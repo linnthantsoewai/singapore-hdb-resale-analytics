@@ -67,11 +67,11 @@ A major technical challenge of this dataset was reconciling **36 years of data a
 
 | Dataset Era | Transaction Count | Key Schema Challenge & Harmonization Solution |
 | :--- | :--- | :--- |
-| **1990–1999** | 287,196 | No remaining lease recorded. Reconstructed mathematically from transaction date and lease commence year ($99 - [\text{trans\_year} - \text{commence}]$). |
+| **1990–1999** | 287,196 | No remaining lease recorded. Reconstructed mathematically from transaction date and lease commence year: `99 - (transaction_year - lease_commence_date)`. |
 | **2000–Feb 2012** | 369,651 | Approval-date based records with 10 standard columns. |
 | **Mar 2012–Dec 2014** | 52,203 | Shifted from approval date to registration date; synchronized date format. |
 | **Jan 2015–Dec 2016** | 37,153 | Added `remaining_lease` as raw integer years (e.g., `70`). Cast to decimal float. |
-| **Jan 2017–Sep 2026** | 240,345 | Changed `remaining_lease` to text strings (e.g. `"61 years 04 months"`). Normalized via regex into continuous float years ($61 + 4/12 = 61.33$). |
+| **Jan 2017–Sep 2026** | 240,345 | Changed `remaining_lease` to text strings (e.g., `"61 years 04 months"`). Normalized via regex into decimal years: `61 + (4 / 12) = 61.33`. |
 
 ### ETL Pipeline Highlights ([`src/load_data.py`](src/load_data.py)):
 * **Storey Range Midpoints:** Converted categorical text ranges (`"07 TO 09"`, `"01 TO 03"`) to numeric midpoints (`8.0`, `2.0`) to allow mathematical floor tier analysis.
