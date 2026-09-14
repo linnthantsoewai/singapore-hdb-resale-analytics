@@ -537,39 +537,67 @@ with tab2:
 
     df_real = fetch_real_growth_data()
 
+    # Derive all KPI values from the live query results
+    _latest = df_real[df_real["transaction_year"] == df_real["transaction_year"].max()].iloc[0]
+    _base = df_real[df_real["transaction_year"] == df_real["transaction_year"].min()].iloc[0]
+    _nom_cagr = float(_latest["nominal_cagr_from_1990_pct"])
+    _real_cagr = float(_latest["real_cagr_from_1990_pct"])
+    _nom_gain = float(_latest["cumulative_nominal_gain_pct"])
+    _real_gain = float(_latest["cumulative_real_gain_pct"])
+    _cpi_pct = float(_latest["cpi_deflator"]) - 100.0       # e.g. 192.5 → 92.5%
+    _cpi_mult = float(_latest["cpi_deflator"]) / 100.0      # e.g. 192.5 → $1.925
+    _nom_price = float(_latest["nominal_median_price"])
+    _real_price = float(_latest["real_median_price_1990_dollars"])
+    _wealth_gain = _nom_price - _real_price                 # nominal minus inflation-adjusted
+    _latest_year = int(_latest["transaction_year"])
+    _base_year = int(_base["transaction_year"])
+    _span = _latest_year - _base_year
+
     r1, r2, r3, r4 = st.columns(4)
     with r1:
-        st.markdown("""
-        <div class="metric-card">
-            <div class="metric-label">Nominal 36-Year CAGR</div>
-            <div class="metric-value">6.4%</div>
-            <div class="metric-delta delta-neutral">Total Gain: +1,100%</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            f"""
+            <div class="metric-card">
+                <div class="metric-label">Nominal {_span}-Year CAGR</div>
+                <div class="metric-value">{_nom_cagr:.1f}%</div>
+                <div class="metric-delta delta-neutral">Total Gain: +{_nom_gain:,.0f}%</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     with r2:
-        st.markdown("""
-        <div class="metric-card">
-            <div class="metric-label">Real (CPI-Adjusted) CAGR</div>
-            <div class="metric-value">4.4%</div>
-            <div class="metric-delta delta-warn">Total Gain: +523% (1990 $)</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            f"""
+            <div class="metric-card">
+                <div class="metric-label">Real (CPI-Adjusted) CAGR</div>
+                <div class="metric-value">{_real_cagr:.1f}%</div>
+                <div class="metric-delta delta-warn">Total Gain: +{_real_gain:,.0f}% (1990 $)</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     with r3:
-        st.markdown("""
-        <div class="metric-card">
-            <div class="metric-label">CPI Cumulative Inflation</div>
-            <div class="metric-value">92.5%</div>
-            <div class="metric-delta delta-down">1990 $1.00 = 2026 $1.925</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            f"""
+            <div class="metric-card">
+                <div class="metric-label">CPI Cumulative Inflation</div>
+                <div class="metric-value">{_cpi_pct:.1f}%</div>
+                <div class="metric-delta delta-down">1990 $1.00 = {_latest_year} ${_cpi_mult:.3f}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     with r4:
-        st.markdown("""
-        <div class="metric-card">
-            <div class="metric-label">Real Wealth Creation</div>
-            <div class="metric-value">+$274,773</div>
-            <div class="metric-delta delta-up">Net gain above inflation per flat</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            f"""
+            <div class="metric-card">
+                <div class="metric-label">Real Wealth Creation</div>
+                <div class="metric-value">+${_wealth_gain:,.0f}</div>
+                <div class="metric-delta delta-up">Net gain above inflation per flat</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     metric_choice = st.radio(
         "Select Valuation Metric to Plot:",
