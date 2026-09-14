@@ -5,6 +5,9 @@ An institutional data analytics application presenting the results of 5 core Pos
 investigations across 986,548 historical resale transactions.
 """
 
+import json
+import os
+
 import psycopg
 import pandas as pd
 import plotly.express as px
@@ -12,6 +15,20 @@ import plotly.graph_objects as go
 import streamlit as st
 
 DB_CONN_STR = "dbname=hdb_resale port=5433"
+CACHE_DIR = "data/cached"
+
+
+def _db_available() -> bool:
+    """Probe the DB with a short timeout; returns False on any failure."""
+    try:
+        with psycopg.connect(DB_CONN_STR, connect_timeout=2) as conn:
+            conn.cursor().execute("SELECT 1")
+        return True
+    except Exception:
+        return False
+
+
+DB_AVAILABLE = _db_available()
 
 # -----------------------------------------------------------------------------
 # 1. Page Configuration
@@ -235,7 +252,7 @@ def clean_numeric_df(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _fetch_sql(sql_path: str) -> pd.DataFrame:
-    """Shared helper: connect to DB, execute a single-statement SQL file, return a clean DataFrame."""
+    """Execute a single-statement SQL file against PostgreSQL; returns a clean DataFrame."""
     with psycopg.connect(DB_CONN_STR) as conn:
         with conn.cursor() as cur:
             with open(sql_path, "r") as f:
@@ -244,75 +261,105 @@ def _fetch_sql(sql_path: str) -> pd.DataFrame:
             return clean_numeric_df(pd.DataFrame(cur.fetchall(), columns=cols))
 
 
+def _read_parquet(name: str) -> pd.DataFrame:
+    """Read a pre-computed Parquet file from the cache directory."""
+    path = os.path.join(CACHE_DIR, name)
+    if not os.path.exists(path):
+        st.error(
+            f"Cache file `{path}` not found. Run `python scripts/precompute_cache.py` locally "
+            "and commit the `data/cached/` files to fix this."
+        )
+        st.stop()
+    return pd.read_parquet(path)
+
+
 @st.cache_data(ttl=3600)
 def fetch_overview_kpis():
-    with psycopg.connect(DB_CONN_STR) as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT 
-                    COUNT(*),
-                    MIN(transaction_year),
-                    MAX(transaction_year),
-                    COUNT(DISTINCT town)
-                FROM resale_prices;
-            """)
-            total_rows, min_year, max_year, total_towns = cur.fetchone()
+    if DB_AVAILABLE:
+        with psycopg.connect(DB_CONN_STR) as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT
+                        COUNT(*),
+                        MIN(transaction_year),
+                        MAX(transaction_year),
+                        COUNT(DISTINCT town)
+                    FROM resale_prices;
+                """)
+                total_rows, min_year, max_year, total_towns = cur.fetchone()
 
-            cur.execute("""
-                SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY resale_price)
-                FROM resale_prices
-                WHERE transaction_year = (SELECT MAX(transaction_year) FROM resale_prices);
-            """)
-            latest_median_price = cur.fetchone()[0]
+                cur.execute("""
+                    SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY resale_price)
+                    FROM resale_prices
+                    WHERE transaction_year = (SELECT MAX(transaction_year) FROM resale_prices);
+                """)
+                latest_median_price = cur.fetchone()[0]
 
-            cur.execute("""
-                SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY resale_price)
-                FROM resale_prices
-                WHERE transaction_year = (SELECT MIN(transaction_year) FROM resale_prices);
-            """)
-            earliest_median_price = cur.fetchone()[0]
+                cur.execute("""
+                    SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY resale_price)
+                    FROM resale_prices
+                    WHERE transaction_year = (SELECT MIN(transaction_year) FROM resale_prices);
+                """)
+                earliest_median_price = cur.fetchone()[0]
 
-    return {
-        "total_rows": total_rows,
-        "min_year": min_year,
-        "max_year": max_year,
-        "total_towns": total_towns,
-        "latest_median_price": float(latest_median_price),
-        "earliest_median_price": float(earliest_median_price),
-    }
+        return {
+            "total_rows": total_rows,
+            "min_year": min_year,
+            "max_year": max_year,
+            "total_towns": total_towns,
+            "latest_median_price": float(latest_median_price),
+            "earliest_median_price": float(earliest_median_price),
+        }
+    # Cloud fallback: read from pre-computed JSON
+    path = os.path.join(CACHE_DIR, "overview_kpis.json")
+    if not os.path.exists(path):
+        st.error(f"Cache file `{path}` not found. Run `python scripts/precompute_cache.py` and commit `data/cached/`.")
+        st.stop()
+    with open(path) as f:
+        return json.load(f)
 
 
 @st.cache_data(ttl=3600)
 def fetch_lease_decay_data():
-    return _fetch_sql("sql/01_lease_decay_cliff.sql")
+    if DB_AVAILABLE:
+        return _fetch_sql("sql/01_lease_decay_cliff.sql")
+    return _read_parquet("lease_decay.parquet")
 
 
 @st.cache_data(ttl=3600)
 def fetch_real_growth_data():
-    return _fetch_sql("sql/02_real_vs_nominal_growth.sql")
+    if DB_AVAILABLE:
+        return _fetch_sql("sql/02_real_vs_nominal_growth.sql")
+    return _read_parquet("real_growth.parquet")
 
 
 @st.cache_data(ttl=3600)
 def fetch_town_ranking_data():
-    return _fetch_sql("sql/03_town_ranking_by_decade.sql")
+    if DB_AVAILABLE:
+        return _fetch_sql("sql/03_town_ranking_by_decade.sql")
+    return _read_parquet("town_ranking.parquet")
 
 
 @st.cache_data(ttl=3600)
 def fetch_size_and_storeys_data():
-    with psycopg.connect(DB_CONN_STR) as conn:
-        with conn.cursor() as cur:
-            with open("sql/04_price_per_sqm_storeys.sql", "r") as f:
-                stmts = [s.strip() for s in f.read().split(";") if s.strip()]
-            cur.execute(stmts[0])
-            part1 = clean_numeric_df(pd.DataFrame(cur.fetchall(), columns=[d[0] for d in cur.description]))
-            cur.execute(stmts[1])
-            part2 = clean_numeric_df(pd.DataFrame(cur.fetchall(), columns=[d[0] for d in cur.description]))
-    return part1, part2
+    if DB_AVAILABLE:
+        with psycopg.connect(DB_CONN_STR) as conn:
+            with conn.cursor() as cur:
+                with open("sql/04_price_per_sqm_storeys.sql", "r") as f:
+                    stmts = [s.strip() for s in f.read().split(";") if s.strip()]
+                cur.execute(stmts[0])
+                part1 = clean_numeric_df(pd.DataFrame(cur.fetchall(), columns=[d[0] for d in cur.description]))
+                cur.execute(stmts[1])
+                part2 = clean_numeric_df(pd.DataFrame(cur.fetchall(), columns=[d[0] for d in cur.description]))
+        return part1, part2
+    return _read_parquet("size_eras.parquet"), _read_parquet("storeys.parquet")
 
 
 @st.cache_data(ttl=3600)
 def fetch_policy_impact_data():
-    return _fetch_sql("sql/05_policy_event_impact.sql")
+    if DB_AVAILABLE:
+        return _fetch_sql("sql/05_policy_event_impact.sql")
+    return _read_parquet("policy_impact.parquet")
 
 
 def apply_chart_theme(fig, height=380):
